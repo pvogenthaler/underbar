@@ -10,10 +10,6 @@
     return val;
   };
 
-  _.isEven = function(number){
-    return number % 2 === 0;
-  };
-
   /**
    * COLLECTIONS
    * ===========
@@ -42,6 +38,12 @@
   // Like first, but for the last elements. If n is undefined, return just the
   // last element.
   _.last = function(array, n) {
+    if (n > array.length) {
+      return array;
+    } else if (n === undefined) {
+      return array[array.length - 1];
+    }
+    return array.slice(array.length - n);
   };
 
   // Call iterator(value, key, collection) for each element of collection.
@@ -50,6 +52,15 @@
   // Note: _.each does not have a return value, but rather simply runs the
   // iterator function over each item in the input collection.
   _.each = function(collection, iterator) {
+    if (Array.isArray(collection)) {
+      for (var i = 0; i < collection.length; i++) {
+        iterator(collection[i], i, collection);
+      }
+    } else {
+      for (var i in collection) {
+        iterator(collection[i], i, collection);
+      }
+    }
   };
 
   // Returns the index at which value can be found in the array, or -1 if value
@@ -71,16 +82,33 @@
 
   // Return all elements of an array that pass a truth test.
   _.filter = function(collection, test) {
+    var results = [];
+    _.each(collection, function(item) {
+      if (test(item)) {
+        results.push(item);
+      }
+    })
+    return results;
   };
 
   // Return all elements of an array that don't pass a truth test.
   _.reject = function(collection, test) {
     // TIP: see if you can re-use _.filter() here, without simply
     // copying code in and modifying it
+    return _.filter(collection, function(item) {
+      return !test(item);
+    });
   };
 
   // Produce a duplicate-free version of the array.
   _.uniq = function(array) {
+    var results = [];
+    _.each(array, function(item) {
+      if (!results.includes(item)) {
+        results.push(item);
+      }
+    });
+    return results;
   };
 
 
@@ -89,6 +117,11 @@
     // map() is a useful primitive iteration function that works a lot
     // like each(), but in addition to running the operation on all
     // the members, it also maintains an array of results.
+    var results = [];
+    _.each(collection, function(item) {
+      results.push(iterator(item));
+    });
+    return results;
   };
 
   /*
@@ -130,6 +163,21 @@
   //   }); // should be 5, regardless of the iterator function passed in
   //          No accumulator is given so the first element is used.
   _.reduce = function(collection, iterator, accumulator) {
+    var result;
+    if (accumulator === undefined) {
+      result = collection[0];
+      var arr = collection.slice(1);
+      _.each(arr, function(item) {
+        result = iterator(result, item);
+      });
+      return result;
+    } else {
+      result = accumulator;
+      _.each(collection, function(item) {
+        result = iterator(result, item);
+      });
+      return result;
+    }
   };
 
   // Determine if the array or object contains a given value (using `===`).
@@ -148,12 +196,40 @@
   // Determine whether all of the elements match a truth test.
   _.every = function(collection, iterator) {
     // TIP: Try re-using reduce() here.
+    if (iterator === undefined) {
+      iterator = function(item) {
+        return item === true;
+      };
+    }
+    return _.reduce(collection, function(passTest, item) {
+      if (!passTest) {
+        return false;
+      }
+      else if (iterator(item)) {
+        return true;
+      }
+      return false;
+    }, true);
   };
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
   _.some = function(collection, iterator) {
     // TIP: There's a very clever way to re-use every() here.
+    if (iterator === undefined) {
+      iterator = function(item) {
+        return item === true;
+      };
+    } 
+    return _.reduce(collection, function(passTest, item) {
+      if (passTest) {
+        return true;
+      }
+      else if (iterator(item)) {
+        return true;
+      }
+      return false;
+    }, false) ;
   };
 
 
@@ -176,11 +252,27 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
+    var source = Array.prototype.slice.call(arguments).slice(1);
+    _.each(source, function(i) {
+      _.each(i, function(value, key) {
+        obj[key] = value;
+      });
+    });
+    return obj;
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
+    var source = Array.prototype.slice.call(arguments).slice(1);
+    _.each(source, function(i) {
+      _.each(i, function(value, key) {
+        if (obj[key] === undefined) {
+          obj[key] = value;
+        }
+      });
+    });
+    return obj;
   };
 
 
@@ -224,6 +316,16 @@
   // already computed the result for the given argument and return that value
   // instead if possible.
   _.memoize = function(func) {
+    var alreadyCalled = {};
+    var result;
+    return function() {
+      var arg = JSON.stringify(arguments);
+      if (!(arg in alreadyCalled)) {
+        result = func.apply(this, arguments);
+        alreadyCalled[arg] = result;
+      }
+      return alreadyCalled[arg];
+    };
   };
 
   // Delays a function for the given number of milliseconds, and then calls
@@ -233,6 +335,10 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
+    var args = Array.prototype.slice.call(arguments, 2)
+    return setTimeout(function() {
+      return func.apply(null, args);
+    }, wait);
   };
 
 
@@ -247,6 +353,14 @@
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
   _.shuffle = function(array) {
+    var results = [];
+    var arr = array.slice(0);
+    _.each(array, function(item) {
+      var index = Math.floor(Math.random() * arr.length);
+      var item = arr.splice(index, 1); 
+      results.push(item[0]);
+    });
+    return results;
   };
 
 
